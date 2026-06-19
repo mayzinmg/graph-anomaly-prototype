@@ -6,6 +6,7 @@ import pandas as pd
 DATA_FILE = Path("data/transactions.csv")
 OUTPUT_DIR = Path("output")
 ANOMALY_OUTPUT_FILE = OUTPUT_DIR / "anomaly_results.csv"
+GRAPH_NODES_OUTPUT_FILE = OUTPUT_DIR / "graph_nodes.csv"
 
 REQUIRED_COLUMNS = {
     "transaction_id",
@@ -145,18 +146,46 @@ def score_anomalies(featured: pd.DataFrame)-> pd.DataFrame:
 
     return scored
 
-        
+def build_graph_nodes(scored: pd.DataFrame)->pd.DataFrame:
+
+    node_rows=[]
+    entity_columns={
+        "Customer": "customer_id",
+        "Transaction": "transaction_id",
+        "Device": "device_id",
+        "Card": "card_id",
+        "Product": "product_id",
+        "Cashier": "cashier_id",
+    }
+
+    for node_type,column_name in entity_columns.items():
+        unique_ids= scored[column_name].dropna().unique()
+
+        for business_id in unique_ids:
+            node_rows.append(
+                {
+                    "node_id": f"{node_type}:{business_id}",
+                    "node-type":node_type,
+                    "business_id": business_id
+                }
+            )
+    return pd.DataFrame(node_rows)
 
 def main() -> None:
     transactions = load_transactions()
     featured = add_graph_features(transactions)
     scored = score_anomalies(featured)
+    graph_nodes = build_graph_nodes(scored)
 
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
     scored.to_csv(
         ANOMALY_OUTPUT_FILE,
         index=False,
+    )
+    graph_nodes.to_csv(
+    GRAPH_NODES_OUTPUT_FILE,
+    index=False,
     )
 
     print("Anomaly scoring completed.")
