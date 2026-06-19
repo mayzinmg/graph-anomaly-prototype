@@ -7,6 +7,7 @@ DATA_FILE = Path("data/transactions.csv")
 OUTPUT_DIR = Path("output")
 ANOMALY_OUTPUT_FILE = OUTPUT_DIR / "anomaly_results.csv"
 GRAPH_NODES_OUTPUT_FILE = OUTPUT_DIR / "graph_nodes.csv"
+GRAPH_EDGES_OUTPUT_FILE = OUTPUT_DIR / "graph_edges.csv"
 
 REQUIRED_COLUMNS = {
     "transaction_id",
@@ -171,11 +172,75 @@ def build_graph_nodes(scored: pd.DataFrame)->pd.DataFrame:
             )
     return pd.DataFrame(node_rows)
 
+def build_graph_edges(scored:pd.DataFrame)->pd.DataFrame:
+    edge_rows=[]
+
+    for row in scored.itertuples(index=False):
+        customer_node=f"Customer:{row.customer_id}"
+        transaction_node= f"Transaction:{row.transaction_id}"
+        device_node= f"Device:{row.device_id}"
+        card_node= f"Card:{row.card_id}"
+        product_node=f"Product:{row.product_id}"
+        cashier_node=f"Cashier:{row.cashier_id}"
+
+        edge_rows.append(
+
+                {   
+                    "source_node_id": customer_node,
+                    "target_node_id": transaction_node,
+                    "relationship_type": "PLACED",
+                    "transaction_id": row.transaction_id,
+                    "event_time": row.event_time,
+                }
+
+            )
+
+        edge_rows.append(
+            {
+                "source_node_id": transaction_node,
+                "target_node_id": device_node,
+                "relationship_type": "USED_DEVICE",
+                "transaction_id": row.transaction_id,
+                "event_time": row.event_time,
+            }
+        )
+        edge_rows.append(
+            {
+                "source_node_id": transaction_node,
+                "target_node_id": card_node,
+                "relationship_type": "PAID_WITH",
+                "transaction_id": row.transaction_id,
+                "event_time": row.event_time,
+            }
+        )
+
+        edge_rows.append(
+            {
+                "source_node_id": transaction_node,
+                "target_node_id": product_node,
+                "relationship_type": "INVOLVES_PRODUCT",
+                "transaction_id": row.transaction_id,
+                "event_time": row.event_time,
+            }
+        )
+
+        edge_rows.append(
+            {
+                "source_node_id": transaction_node,
+                "target_node_id": cashier_node,
+                "relationship_type": "PROCESSED_BY",
+                "transaction_id": row.transaction_id,
+                "event_time": row.event_time,
+            }
+        )
+    return pd.DataFrame(edge_rows)
+
 def main() -> None:
     transactions = load_transactions()
     featured = add_graph_features(transactions)
     scored = score_anomalies(featured)
     graph_nodes = build_graph_nodes(scored)
+    graph_edges = build_graph_edges(scored)
 
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -187,6 +252,10 @@ def main() -> None:
     GRAPH_NODES_OUTPUT_FILE,
     index=False,
     )
+    graph_edges.to_csv(
+    GRAPH_EDGES_OUTPUT_FILE,
+    index=False,
+)
 
     print("Anomaly scoring completed.")
     print(f"Output written to: {ANOMALY_OUTPUT_FILE.resolve()}")
@@ -209,6 +278,7 @@ def main() -> None:
             ]
         ]
     )
+    print(f"Graph edges written to: {GRAPH_EDGES_OUTPUT_FILE.resolve()}")
 
 
 if __name__ == "__main__":
