@@ -17,21 +17,8 @@ REQUIRED_COLUMNS = {
     "event_time",
 }
 
-<<<<<<< HEAD
-def get_severity(score:int)-> str:
-    if score>=90:
-        return "Critical"
-    if score>=60:
-        return "High"
-    if score>=30:
-        return "Medium"
-    return "Low"
-
-def main()-> None:
-=======
 
 def load_transactions() -> pd.DataFrame:
->>>>>>> dd07b3bde4b41b69097f4dec8a5cdb0967cb124f
     if not DATA_FILE.exists():
         raise FileNotFoundError(
             f"Cannot find the dataset: {DATA_FILE.resolve()}"
@@ -109,14 +96,63 @@ def add_graph_features(transactions: pd.DataFrame) -> pd.DataFrame:
 
     return featured
 
+def get_severity(score: int) -> str:
+    if score >= 90:
+        return "Critical"
+    if score >= 60:
+        return "High"
+    if score >= 30:
+        return "Medium"
+    return "Low"
+
+def score_anomalies(featured: pd.DataFrame)-> pd.DataFrame:
+    scored= featured.copy()
+
+    anomaly_scores=[]
+    explanations=[]
+
+    for row in scored.itertuples(index=False):
+        score=0
+        reasons=[]
+
+        if row.customers_per_device>=3:
+            score +=30
+            reasons.append(
+                   f"{row.customers_per_device} customers shared device {row.device_id}"
+            )
+        if row.customers_per_card>=3:
+            score +=35
+            reasons.append(
+                 f"{row.customers_per_card} customers shared card {row.card_id}"
+            )
+        if row.transaction_type == "refund" and row.refunds_per_cashier>=3:
+            score +=20
+            reasons.append(
+                 f"Cashier {row.cashier_id} processed {row.refunds_per_cashier} refunds"
+            )
+        anomaly_scores.append(score)
+
+        if reasons:
+            explanations.append("; ".join(reasons))
+        else:
+            explanations.append("No suspicious patttern detected")
+    
+    scored["anomaly_score"]=anomaly_scores
+    scored["severity"]=scored["anomaly_score"].apply(get_severity)
+    scored["explanation"]=explanations
+
+    return scored
+
+        
 
 def main() -> None:
     transactions = load_transactions()
     featured = add_graph_features(transactions)
+    scored = score_anomalies(featured)
 
-    print("Graph features calculated.")
+    print("Anomaly scoring completed.")
     print(
-        featured[
+        scored[
             [
                 "transaction_id",
                 "customer_id",
@@ -127,10 +163,12 @@ def main() -> None:
                 "customers_per_device",
                 "customers_per_card",
                 "refunds_per_cashier",
+                "anomaly_score",
+                "severity",
+                "explanation",
             ]
         ]
     )
-
 
 
 if __name__ == "__main__":
