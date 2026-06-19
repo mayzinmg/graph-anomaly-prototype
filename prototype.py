@@ -4,6 +4,8 @@ import pandas as pd
 
 
 DATA_FILE = Path("data/transactions.csv")
+OUTPUT_DIR = Path("output")
+ANOMALY_OUTPUT_FILE = OUTPUT_DIR / "anomaly_results.csv"
 
 REQUIRED_COLUMNS = {
     "transaction_id",
@@ -150,7 +152,16 @@ def main() -> None:
     featured = add_graph_features(transactions)
     scored = score_anomalies(featured)
 
+    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+
+    scored.to_csv(
+        ANOMALY_OUTPUT_FILE,
+        index=False,
+    )
+
     print("Anomaly scoring completed.")
+    print(f"Output written to: {ANOMALY_OUTPUT_FILE.resolve()}")
+
     print(
         scored[
             [
