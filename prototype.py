@@ -14,6 +14,15 @@ REQUIRED_COLUMNS= {
     "event_time",
 }
 
+def get_severity(score:int)-> str:
+    if score>=90:
+        return "Critical"
+    if score>=60:
+        return "High"
+    if score>=30:
+        return "Medium"
+    return "Low"
+
 def main()-> None:
     if not DATA_FILE.exists():
         raise FileExistsError(f"Cannot find the dataset:")
@@ -34,6 +43,7 @@ def main()-> None:
     print(f"Transactions: {len(transactions)}")
     print("\nColumn data types:")
     print(transactions.dtypes)
+
 
 if __name__ == "__main__":
     main()
