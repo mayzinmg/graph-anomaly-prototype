@@ -340,6 +340,13 @@ def main() -> None:
     inspect_suspicious_node(graph, "Card:K99")
     inspect_suspicious_node(graph, "Cashier:E09")
 
+    suspicious_subgraph = extract_suspicious_subgraph(
+    graph,
+    ["Device:D99", "Card:K99", "Cashier:E09"],
+    )
+
+    print_subgraph_summary(suspicious_subgraph)
+
 def build_networkx_graph(
     graph_nodes: pd.DataFrame,
     graph_edges: pd.DataFrame,
@@ -394,6 +401,38 @@ def print_networkx_summary(graph: nx.DiGraph) -> None:
     print("NetworkX graph built.")
     print(f"NetworkX node count: {graph.number_of_nodes()}")
     print(f"NetworkX edge count: {graph.number_of_edges()}")
+
+def extract_suspicious_subgraph(
+    graph: nx.DiGraph,
+    center_nodes: list[str],
+) -> nx.DiGraph:
+    subgraph_node_ids = set(center_nodes)
+
+    for center_node in center_nodes:
+        if center_node not in graph:
+            continue
+
+        subgraph_node_ids.update(graph.predecessors(center_node))
+        subgraph_node_ids.update(graph.successors(center_node))
+
+    return graph.subgraph(subgraph_node_ids).copy()
+
+def print_subgraph_summary(subgraph: nx.DiGraph) -> None:
+    print()
+    print("Suspicious subgraph extracted.")
+    print(f"Subgraph node count: {subgraph.number_of_nodes()}")
+    print(f"Subgraph edge count: {subgraph.number_of_edges()}")
+
+    print("Subgraph nodes:")
+    for node_id, node_data in subgraph.nodes(data=True):
+        print(f"  {node_id} ({node_data['node_type']})")
+
+    print("Subgraph edges:")
+    for source_node, target_node, edge_data in subgraph.edges(data=True):
+        print(
+            f"  {source_node} -> {target_node} "
+            f"({edge_data['relationship_type']})"
+        )
 
 if __name__ == "__main__":
     main()
