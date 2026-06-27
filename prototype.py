@@ -336,6 +336,10 @@ def main() -> None:
     graph = build_networkx_graph(graph_nodes, graph_edges)
     print_networkx_summary(graph)
 
+    inspect_suspicious_node(graph, "Device:D99")
+    inspect_suspicious_node(graph, "Card:K99")
+    inspect_suspicious_node(graph, "Cashier:E09")
+
 def build_networkx_graph(
     graph_nodes: pd.DataFrame,
     graph_edges: pd.DataFrame,
@@ -359,6 +363,33 @@ def build_networkx_graph(
         )
 
     return graph
+def inspect_suspicious_node(graph: nx.DiGraph, node_id: str) -> None:
+    if node_id not in graph:
+        print(f"{node_id} was not found in the graph.")
+        return
+
+    print()
+    print(f"Inspecting node: {node_id}")
+
+    incoming_nodes = list(graph.predecessors(node_id))
+    outgoing_nodes = list(graph.successors(node_id))
+
+    print(f"Incoming connections: {len(incoming_nodes)}")
+    for source_node in incoming_nodes:
+        edge_data = graph.get_edge_data(source_node, node_id)
+        print(
+            f"  {source_node} -> {node_id} "
+            f"({edge_data['relationship_type']})"
+        )
+
+    print(f"Outgoing connections: {len(outgoing_nodes)}")
+    for target_node in outgoing_nodes:
+        edge_data = graph.get_edge_data(node_id, target_node)
+        print(
+            f"  {node_id} -> {target_node} "
+            f"({edge_data['relationship_type']})"
+        )
+
 def print_networkx_summary(graph: nx.DiGraph) -> None:
     print("NetworkX graph built.")
     print(f"NetworkX node count: {graph.number_of_nodes()}")
