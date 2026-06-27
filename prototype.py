@@ -1,5 +1,5 @@
 from pathlib import Path
-
+import networkx as nx
 import pandas as pd
 
 
@@ -166,7 +166,7 @@ def build_graph_nodes(scored: pd.DataFrame)->pd.DataFrame:
             node_rows.append(
                 {
                     "node_id": f"{node_type}:{business_id}",
-                    "node-type":node_type,
+                    "node_type":node_type,
                     "business_id": business_id
                 }
             )
@@ -331,6 +331,38 @@ def main() -> None:
     graph_edges = build_graph_edges(scored)
 
     validate_graph_output(graph_nodes, graph_edges)
+    print("Graph node columns:", graph_nodes.columns.tolist())
+    print("Graph edge columns:", graph_edges.columns.tolist())
+    graph = build_networkx_graph(graph_nodes, graph_edges)
+    print_networkx_summary(graph)
+
+def build_networkx_graph(
+    graph_nodes: pd.DataFrame,
+    graph_edges: pd.DataFrame,
+) -> nx.DiGraph:
+    graph = nx.DiGraph()
+
+    for row in graph_nodes.to_dict("records"):
+        graph.add_node(
+            row["node_id"],
+            node_type=row["node_type"],
+            business_id=row["business_id"],
+        )
+
+    for row in graph_edges.to_dict("records"):
+        graph.add_edge(
+            row["source_node_id"],
+            row["target_node_id"],
+            relationship_type=row["relationship_type"],
+            transaction_id=row["transaction_id"],
+            event_time=row["event_time"],
+        )
+
+    return graph
+def print_networkx_summary(graph: nx.DiGraph) -> None:
+    print("NetworkX graph built.")
+    print(f"NetworkX node count: {graph.number_of_nodes()}")
+    print(f"NetworkX edge count: {graph.number_of_edges()}")
 
 if __name__ == "__main__":
     main()
