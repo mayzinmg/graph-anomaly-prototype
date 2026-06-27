@@ -235,6 +235,54 @@ def build_graph_edges(scored:pd.DataFrame)->pd.DataFrame:
         )
     return pd.DataFrame(edge_rows)
 
+def validate_graph_output(
+    graph_nodes: pd.DataFrame,
+    graph_edges: pd.DataFrame,
+) -> None:
+    node_ids = set(graph_nodes["node_id"])
+
+    missing_source_nodes = sorted(
+        set(graph_edges["source_node_id"]) - node_ids
+    )
+
+    missing_target_nodes = sorted(
+        set(graph_edges["target_node_id"]) - node_ids
+    )
+
+    if missing_source_nodes:
+        raise ValueError(
+            "Some edge source nodes do not exist in graph_nodes.csv: "
+            + ", ".join(missing_source_nodes)
+        )
+
+    if missing_target_nodes:
+        raise ValueError(
+            "Some edge target nodes do not exist in graph_nodes.csv: "
+            + ", ".join(missing_target_nodes)
+        )
+
+    allowed_relationship_types = {
+        "PLACED",
+        "USED_DEVICE",
+        "PAID_WITH",
+        "INVOLVES_PRODUCT",
+        "PROCESSED_BY",
+    }
+
+    invalid_relationship_types = sorted(
+        set(graph_edges["relationship_type"]) - allowed_relationship_types
+    )
+
+    if invalid_relationship_types:
+        raise ValueError(
+            "Invalid relationship types found: "
+            + ", ".join(invalid_relationship_types)
+        )
+
+    print("Graph validation passed.")
+    print(f"Node count: {len(graph_nodes)}")
+    print(f"Edge count: {len(graph_edges)}")
+
 def main() -> None:
     transactions = load_transactions()
     featured = add_graph_features(transactions)
@@ -279,7 +327,10 @@ def main() -> None:
         ]
     )
     print(f"Graph edges written to: {GRAPH_EDGES_OUTPUT_FILE.resolve()}")
+    graph_nodes = build_graph_nodes(scored)
+    graph_edges = build_graph_edges(scored)
 
+    validate_graph_output(graph_nodes, graph_edges)
 
 if __name__ == "__main__":
     main()
